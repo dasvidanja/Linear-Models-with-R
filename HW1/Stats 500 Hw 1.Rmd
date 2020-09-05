@@ -43,7 +43,7 @@ summary(teengamb)
 ### Income & Gamble 
 
 The **mean** for *income* is: 4.642 pounds per week & the **median** is 3.250 ppounds per week. Whereas, the **mean** for *gamble* is 19.3 pounds per year & the **median** is 6.0 pounds per year. 
-The reason for the means being larger than the medians, in both cases, has to due with the *skewed* distribnution that both of this variables have. Both variables tend to have a few observations that have extreme values. Now, these extreme vaues skew the mean. The key idea is that the mean is easily influeced by extreme values, whereas the median is not. As a result, in both cases we have skewed distributions & in both cases the mean is greater than the mean.
+The reason for the means being larger than the medians, in both cases, has to due with the *skewed* distribnution that both of this variables have. Both variables tend to have a few observations that have extreme values. Now, these extreme vaues skew the mean. The key idea is that the mean is easily influeced by extreme values, whereas the median is not. As a result, in both cases we have skewed distributions & in both cases the mean is greater than the median.
 ```{r incomeGamble, error =T, echo= FALSE}
 
 par(mfrow=c(1,2))
@@ -136,14 +136,24 @@ In the case of **gamble-income**, one would expect that the higher the income th
 
 In the case of **status-verbal**, we are able to see that individuals with a better socioeconomic staus seem to be doing better at the verabal testing. The implications of this finding suggests that rich people are more likely to do good in academia than poor people. Altough a bit shocking, this finding does indeed reflect the general reality. 
 
+The **scatterplots** below allow us to get a graphical representation of the strength of these relationship. The blue and red line represent their respecitve regression lines. 
+
 Overall, these discoveries are basic in their meaning, but extremely revelatory to a beginner like myself. 
 ```{r interesting, error=T, echo=FALSE}
 par(mfrow=c(1,2))
-plot(teengamb$income ~ teengamb$gamble)
+plot(teengamb$income ~ teengamb$gamble, 
+     xlab= 'Gamble',
+     ylab = 'Income',
+     main="Gamble vs Income",
+     font.main=1, )
 abline(lm(teengamb$income ~ teengamb$gamble, data = teengamb), col = "blue")
 
-plot(teengamb$verbal ~ teengamb$status)
-abline(lm(teengamb$verbal ~ teengamb$status, data = teengamb), col = "red")
+plot(teengamb$verbal ~ teengamb$status,
+      xlab= 'Status',
+     ylab = 'Verbal',main="Staus vs Verbal",
+     font.main=1, )
+abline(lm(teengamb$verbal ~ teengamb$status, data = teengamb), 
+       col = "red")
 ```
 References: 
 https://www.r-bloggers.com/adding-measures-of-central-tendency-to-histograms-in-r/
