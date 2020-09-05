@@ -1,0 +1,153 @@
+---
+title: ''
+author: ''
+date: ''
+output:
+  html_document:
+    theme: lumen
+    toc: yes
+    toc_collapsed: yes
+    toc_float: yes
+  word_document:
+    toc: no
+  pdf_document:
+    toc: no
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## STATS 500 HW 1 
+
+### General Numerical 
+
+In this general summary we are able to note that the variable **sex** has been converted to a factor and named with the "Male" & "Female" label. There seem to be more males (28) than females (19) in this dataset. At first glance, the varibales **status** , **income**, and **verbal** seem to have no extreme values. Unlike the variable **gamble** in which we are able to note maximum value of 156- this is too far away from the mean & a possible ourlier/error. 
+
+``` {r readData , error = T,echo = FALSE}
+#Load data & packages
+library(faraway)
+data(teengamb)
+#head(teengamb)
+
+#sex (levels(teengamb$test) <- c("Male","Female"))
+# Change 0 to male, and 1 to female
+teengamb$sex[teengamb$sex ==1] <- "FEMALE"
+teengamb$sex[teengamb$sex ==0] <- "MALE"
+
+# Change sex from quantitative to categorical through factor
+teengamb$sex <- factor(teengamb$sex)
+
+#Get a numerical summary of the data 
+summary(teengamb)
+#str(teengamb)
+```
+### Income & Gamble 
+
+The **mean** for *income* is: 4.642 pounds per week & the **median** is 3.250 ppounds per week. Whereas, the **mean** for *gamble* is 19.3 pounds per year & the **median** is 6.0 pounds per year. 
+The reason for the means being larger than the medians, in both cases, has to due with the *skewed* distribnution that both of this variables have. Both variables tend to have a few observations that have extreme values. Now, these extreme vaues skew the mean. The key idea is that the mean is easily influeced by extreme values, whereas the median is not. As a result, in both cases we have skewed distributions & in both cases the mean is greater than the mean.
+```{r incomeGamble, error =T, echo= FALSE}
+
+par(mfrow=c(1,2))
+#Histogram of 
+hist(teengamb$income,
+     xlab="Income",
+     main="Histogram of Income",
+     col = "peachpuff", # column color
+     border = "black", 
+     prob = TRUE, # show densities instead of frequencies
+ )
+#Mean
+abline(v = mean(teengamb$income),
+ col = "royalblue",
+ lwd = 2)
+#Median
+abline(v = median(teengamb$income),
+ col = "red",
+ lwd = 2)
+#Legend
+legend(x = "topright", # location of legend within plot area
+ c("Mean", "Median"),
+ col = c("royalblue", "red"),
+ lwd = c(2, 2))
+
+#Gamble 
+hist(teengamb$gamble,
+     xlab="Gamble",
+     main="Histogram of Gamble",
+     col = "peachpuff", # column color
+     border = "black", 
+     prob = TRUE, # show densities instead of frequencies
+     )
+abline(v = mean(teengamb$gamble),
+ col = "royalblue",
+ lwd = 2)
+
+abline(v = median(teengamb$gamble),
+ col = "red",
+ lwd = 2)
+
+legend(x = "topright", # location of legend within plot area
+ c("Mean", "Median"),
+ col = c("royalblue", "red"),
+ lwd = c(2, 2))
+```
+
+### Verbal 
+
+There are a **total** of 47 observations in the verbal column, of which only **9** are considered to be uniqe. 
+
+```{r verbal, error=T, echo=FALSE}
+#sprintf('Total: ', length(teengamb$verbal))
+#sort(teengamb$verbal)
+#length(unique(teengamb$verbal))
+unique(sort(teengamb$verbal))
+```
+
+In order to find outliers in a data, we can inspect the data graphically through a boxplot, or we can look for the points that are below Q1- 1.5* IQR & above Q3+1.5*IQR.
+In the boxplot, we are able to see that there are two outliers. These points are the ones that are outside of the whiskers. 
+``` {r verbalBox , error = T, echo = FALSE}
+#Boxplot
+boxplot(teengamb$verbal,xlab="Verbal",main="Boxplot of Verbal", 
+        col= 'pink', 
+        border = 'black')
+#outliers
+#teengamb$verbal[teengamb$verbal > 8+1.5*2 ]
+#teengamb$verbal[teengamb$verbal < 6-1.5*2 ]
+```
+
+We are able to identify these points by checking for the ones that satisfy the  aformentioned conditions (1.5* IQR). Such points are **1** and **2** and belong to observation **31** and **35**.
+
+```{r verabl3, error= T}
+teengamb$verbal[teengamb$verbal < 6-1.5*2 ]
+teengamb[teengamb$verbal == 1, ]
+teengamb[teengamb$verbal == 2, ]
+```
+
+### Interesting Findings
+
+**Correlation** is a quantity that allows us to determine the *stregth* of a relationship among two quantitative variables. After some investigating, I was able to find some strong correlations, where strong is defined as a relationship with a correlation greater than 51%. 
+
+``` {r interestingStuff, errror = TRUE,echo = FALSE}
+cor(teengamb[,c("status" ,"income" ,"verbal" ,"gamble")])
+```
+
+The strongest correlation was found between the variables **gamble-income** and **status-verbal**. Both of these correaltaions are positive.  Intuitively, both findings make sense. 
+
+In the case of **gamble-income**, one would expect that the higher the income the more likely one is to gamble. Perhaps, this is not alwatys true, but not necessarily false either. 
+
+In the case of **status-verbal**, we are able to see that individuals with a better socioeconomic staus seem to be doing better at the verabal testing. The implications of this finding suggests that rich people are more likely to do good in academia than poor people. Altough a bit shocking, this finding does indeed reflect the general reality. 
+
+Overall, these discoveries are basic in their meaning, but extremely revelatory to a beginner like myself. 
+```{r interesting, error=T, echo=FALSE}
+par(mfrow=c(1,2))
+plot(teengamb$income ~ teengamb$gamble)
+abline(lm(teengamb$income ~ teengamb$gamble, data = teengamb), col = "blue")
+
+plot(teengamb$verbal ~ teengamb$status)
+abline(lm(teengamb$verbal ~ teengamb$status, data = teengamb), col = "red")
+```
+References: 
+https://www.r-bloggers.com/adding-measures-of-central-tendency-to-histograms-in-r/
+
+Linear Models with R & Canvas slides
+
+
