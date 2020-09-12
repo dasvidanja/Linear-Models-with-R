@@ -1,0 +1,261 @@
+---
+title: ' '
+author: ''
+date: ''
+output:
+  pdf_document: default
+  html_document: default
+---
+### PART A
+
+1. Regression model with weekly wages as the response and years of education and experience as predictors. 
+
+```{r linearModel,error=TRUE, echo=FALSE}
+#Load data & packages
+library(faraway)  #data(uswages, package="faraway")
+data(uswages) 
+
+#Get an idea of the variables meaning
+#help(uswages)
+#cleaning environment rm(list = ls())
+
+#Clean data, remove values with negative experience
+uswages2= uswages[uswages$exper >= 0,]
+
+lmod <- lm(wage ~ educ + exper,data=uswages2)
+summary(lmod)
+```
+
+
+2. The *percentage of variation* (R^2) in the response explained by the model is **13.51%**.
+
+```{r rsquared, echo=FALSE}
+lmodsum = summary(lmod)
+lmodsum$r.squared 
+```
+
+3. The *case number* is **1550**, and the *residual value* belonging to this case number is **7249.174**.
+
+```{r residual}
+#Case number
+which.max(lmodsum$residuals)
+
+#Max residual
+max(lmodsum$residuals)
+
+```
+4. The mean is close to zero, whereas the median is close to -52.14. This leads us to conclude that the distribution of the residuals is **skewed right** given the mean is bigger than the medians. In addition, in general incomes tend to have a right skewed distribution, where the majority make little/average money, and a few ones make very high profits. Also, one of the assumptions when using RSS is that the mean of the errors (residuals) is zero, which is apporximately correct in here too.
+```{r meanMedian, echo=FALSE}
+#Case number
+mean(lmodsum$residuals)
+#Max residual
+median(lmodsum$residuals)
+```
+
+5. For  two  people  with  the  same  education  and  one  year  difference  in experience, the model suggests a difference in predicted weekly wages of **$9.33**.
+
+6. The *correlation* of fitted values is approximately **zero**. 
+
+```{r correlation}
+#Correlation
+cor(lmod$residuals, lmod$fitted.values)
+
+```
+
+```{r res, echo=FALSE}
+#plot(lmod$fitted.values,lmod$residuals, xlab= 'Fitted', ylab='Residuals', main='Residuals vs Fitted values')
+```
+
+6. Geometrically speaking, a correlation of zero hints at **orthogonality**. Orthogonality simply means that the two vecotrs are perpendicular to one another (form a 90 degree angle). In Figure one, we are able to see the plot of the residuals vs the fitted. Next to it (right), we are able to see the theoretical geometric reppresentation and indeed, our correlation of zero, is able to prove that the fitted values (y^) are orthogonal with the residuals (e^). 
+
+!['Geometric Reppresentation of Residuals vs Fitted'](C:/Users/user/Desktop/STATS 500/HW2/Fitted vs Residuals.PNG)
+
+### PART B
+
+
+```{r createMatrix, echo=FALSE, results='hide'}
+#X matrix (predictor space)
+X = matrix( c(1,2,-2,1,-1,-2,1,3,-2,1,3,3,1,2,3,1,1,3,1,0,0,1,0,0,1,-1,0,1,0,1),
+nrow=10,
+ncol=3,
+byrow =TRUE)
+print('X matrix')
+X
+
+#B matrix, coefficients of predictors
+B= matrix(c(1,-1,2),
+          nrow=3,
+          ncol=1,
+          byrow=FALSE)
+print('YELLOW')
+print('B matrix')
+B
+
+#e, normally distributed error (mean=0, sd=1)
+E=matrix(c(rnorm(10,0,1)),
+          nrow=10,
+          ncol=1,
+          byrow=FALSE)
+print('e matrix')
+E
+
+#Y, linear model
+Y= X%*%B+E
+print('Y matrix')
+Y
+
+```
+!['Matrices X, B, e, and Y'](C:/Users/user/Desktop/STATS 500/HW2/MatricesX-B-E-Y.PNG)
+
+1. Beta^ coefficient esimtates
+
+```{r betaEstimate}
+#B^= (XtX)^-1XtY
+xtxi <- solve(t(X) %*% X)
+b = xtxi %*% t(X) %*% Y
+```
+
+```{r print1, echo=FALSE}
+b
+```
+
+2. True variance of sigma^2
+
+```{r Bvar,}
+#var(B) = (XtX)^-1sigma^2 , now sigma is var(e)= sigma^2*I, where sigma is varaince of 
+#e (1^2) & I is the identity matrix
+B_var= xtxi %*% diag(3)
+```
+```{r print2, echo=FALSE}
+B_var
+```
+3. Estimate of sigma^2  throguh the residuals
+```{r residualEstimateSigma}
+#sigma_hat^2 = e^t*e^/ (n-p) , RSS/df.residuals
+#e= y-y^, y^ = xb^y => x(x^tx)^-1xty
+e = sum((Y - X%*%b)^2) / (10-3)
+```
+
+```{r print, echo=FALSE}
+e
+```
+
+4. Yes, the current estimates match with the coefficients of beta (1,-1,2), and their variances are very similar to the ones in number 2. The variances being: **beta1**=0.1318, **beta2**=0.0498, **beta3=0.0265**. 
+
+```{r betareestimate, echo=FALSE, out.width="375px", out.height="270px", echo=FALSE,fig.align='center' }
+beta01 <- vector(mode = "list", length = 1000)
+beta02 <- vector(mode = "list", length = 1000)
+beta03 <- vector(mode = "list", length = 1000)
+
+#1000 re-estimates for beta
+for (i in 1:1000){
+
+  #new e 
+E=matrix( rnorm(10*1,mean=0,sd=1), 10, 1)
+
+#new Y
+Y = X%*%B +E
+
+#Calculate beta
+xtxi <- solve(t(X) %*% X)
+b = xtxi %*% t(X) %*% Y
+
+#Store beta1
+beta01[i] = b[1]
+beta02[i] = b[2]
+beta03[i] = b[3]
+
+}
+
+par(mfrow=c(1,3))
+#Histogram of the 3 beta coefficients 
+hist(unlist(beta01), xlab='beta 1', main='Beta 1')
+hist(unlist(beta02),xlab='beta 2', main='Beta 2')
+hist(unlist(beta03),xlab='beta 3', main='Beta 3')
+
+#Check variance of beta1 vs the variance of beta in question 2 (first entry) should be very close
+#print('variance')
+#var(unlist(beta01))
+#var(unlist(beta02))
+#var(unlist(beta03))
+```
+
+5. Sigma_hat^2, with a **mean** of about 1.0030, does indeed provide a **good** estimate for the actual sigma^2 parameter which is defined as 1. The main reasons for such reality is the use of an e with **normal** distribution (mean=0, sd=1) and RSS for the actual estimation of sigma^2.
+
+```{r sigmareestimate, out.width="375px", out.height="250px", echo=FALSE,fig.align='center' }
+sigma_hat <- vector(mode = "list", length = 1000)
+
+#1000 re-estimates for beta
+for (i in 1:1000){
+
+#new e 
+E=matrix( rnorm(10*1,mean=0,sd=1), 10, 1)
+
+#new Y
+Y = X%*%B +E
+
+#Calculate beta
+xtxi <- solve(t(X) %*% X)
+b = xtxi %*% t(X) %*% Y
+
+#sigma_hat^2 = e^t*e^/ (n-p) , RSS/df.residuals
+#e= y-y^, y^ = xb^y => x(x^tx)^-1xty
+e = sum((Y - X%*%b)^2) / (10-3)
+sigma_hat[i] = e
+
+}
+
+par(mfrow=c(1,1))
+
+#Histogram of SIGMA_HAT^2
+hist(unlist(sigma_hat), breaks = 10, xlab = "sigma_hat^2", main='Sigma_hat^2 Estimate')
+#mean(unlist(sigma_hat))
+```
+
+6. The distribution used was the **uniform** one, which has expectation of zero, and variance of one. All of the three Betas (1,2,3) share similar variances to previous results, but with a slight increase in the variance. Same for the sigma^2 it is quite similar, with the main difference being in the distribution, which is less skewed and almost normal.
+
+```{r uniformDistribution,echo=FALSE, out.width="550px", out.height="280px", echo=FALSE,fig.align='center'}
+
+beta01 <- vector(mode = "list", length = 1000)
+beta02 <- vector(mode = "list", length = 1000)
+beta03 <- vector(mode = "list", length = 1000)
+sigma_hat <- vector(mode = "list", length = 1000)
+
+#1000 re-estimates for beta
+for (i in 1:1000){
+
+#new e 
+E=matrix( runif(10*1, -1.732051, 1.732051), 10, 1)
+
+#new Y
+Y = X%*%B +E
+
+#Calculate beta
+xtxi <- solve(t(X) %*% X)
+b = xtxi %*% t(X) %*% Y
+
+#Store beta1
+beta01[i] = b[1]
+beta02[i] = b[2]
+beta03[i] = b[3]
+
+#Store e
+sigma_hat[i] = sum((Y - X%*%b)^2) / (10-3)
+
+}
+
+par(mfrow=c(1,4))
+#Histogram of the 3 beta coefficients 
+hist(unlist(beta01),xlab='beta 1', main='Beta 1')
+hist(unlist(beta02),xlab='beta 2', main='Beta 2')
+hist(unlist(beta03),xlab='beta 3', main='Beta 3')
+hist(unlist(sigma_hat), breaks = 10,xlab = "sigma_hat^2", main='Sigma_hat^2')
+
+
+#Check variance of beta1 vs the variance of beta in question 2 (first entry) should be very close
+#var(unlist(beta01))
+#var(unlist(beta02))
+#var(unlist(beta03))
+#mean(unlist(sigma_hat))
+```
+
