@@ -1,0 +1,92 @@
+---
+title: ''
+author: ''
+date: ''
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### HW 3
+
+1.  Fit a model with **total** sat score as the response and **takers**, **ratio** and **salary** as predictors.  The *percentage of variation* (R^2) in the response explained by the model is **82.39%**. Also, we are able to see from the summary that all B^ coefficients are significant (i.e non zero & explain variation in response) & that the assumption of constant errors (resdiudals vs fitted) seems to be satisfied. Hence, all these facts together indicate a *good* fit.
+
+```{r linearModel,error=TRUE, echo=FALSE,out.height='50%', out.width='50%'}
+#Load data & packages
+library(faraway)  #data(uswages, package="faraway")
+data(sat) 
+
+#Linear model regress totals on takers,ratio, & salary, 
+lmod <- lm(total ~ takers + ratio +salary,data=sat)
+summary(lmod)
+plot(lmod$fitted.values,lmod$residuals, xlab = 'Fitted Values',ylab = 'Residuals', main='Residuals v vs Fitted values')
+abline(a = 0, b = 0)
+```
+
+2. **H0**: Bsalary <=0 , **HA**: Bsalary > 0. We are going to perform a *t-test*(Bsalary/se(Bsalary) ) that follows a distribution of **t(46)** with a value of **2.541**. The *p-value* associated with this test statistics is **0.0145**. Now this is reflective of a two sided hypothesis test (i.e Bsalaray =0, or Bsalary !=0). Hence, the appropriate p-value for a one sieded t test is 0.0145/2 = **0.00725**, which is smaller than our alpha level 0.01. As a result, we *reject* the null hypothesis in which Bsalary<= 0, in favor of the alternative Bsalary>0. 
+
+3. **H0**: Bratio = 0, **HA**: Bratio  != 0 .We are going to perform an *t-test*(Bratio/se(Bratio)) that follows a distribution of **t(46)** with a value of **-2.187**. The *p-value* associated with this test statistics is **0.0339**. Now this is reflective of a two sided hypothesis test (i.e Bsalaray =0, or Bsalary !=0). As a result, we *fail to reject* the null hypothesis in which Bsalary= 0. 
+ 
+4. **H0**: Bratio=Bsalary=Btakers=0, **H1**: Btakers!=0 or Bratio!=0 or Bsalary!=0. In this model we are testing the hypthesis that at least one of the coefficients is not zero (i.e Bratio!=0). We are able to use an **F-test** with distribution **F(3, 46)** and an f-value of **71.721** which yields a p-value of **~0**. Hence, we *reject* the null in favor of the alternative meaning that at least one coefficient will be significant in the model (i.e explain variance in the response).
+
+```{r FtestSalary,error=TRUE, echo=FALSE}
+#Load data & packages
+library(faraway)  #data(uswages, package="faraway")
+data(sat) 
+
+#Linear model regress totals on takers,ratio, & salary, 
+lmod <- lm(total ~ takers + ratio +salary,data=sat)
+null_mod <- lm(total ~ 1, data= sat)
+anova(null_mod, lmod)
+```
+
+5. The 95% interval does not include zero, whereas the 99% interval does indeed include zero. As a result, the p-value (probability of getting a result as extreme or more as the observerd) will be contained somewhere between *0.01 and 0.05*, which is indeed within reasonable alpha levels (i.e 5%).
+
+```{r confidenceInterval,echo=FALSE}
+#Bhat (+/-) t(n-p)SE(B)
+nf_ci= 2.5525 + c(-1,1) * qt(0.975, 50-4) * 1.0045
+nn_ci= 2.5525 + c(-1,1) * qt(0.995, 50-4) * 1.0045       
+nf_ci
+nn_ci
+```
+
+6. Below is the 95% joint confidence region for the parameters associated with **ratio** and salary. The origin point (0,0) is displayed in red. The location of the origin on the plot tells us the outcome of hypothesis **H0:** Bsalary=Bratio = 0, **HA**: Bsalary or Bratio !=0. We *reject* the null hypothesis,at alpha = 0.05, given that the point (0,0) lies outside of the joint confidence interval.
+
+```{r jointInterval,echo=FALSE, include=FALSE}
+require(ellipse)
+```
+```{r ellipse, echo=FALSE, out.height='75%', out.width='75%', fig.align='center'}
+plot(ellipse(lmod,c(3,4)),type="l")
+points(coef(lmod)[3], coef(lmod)[4], pch=19)
+abline(v=confint(lmod)[3,],lty=2)
+abline(h=confint(lmod)[4,],lty=2)
+points(0,0, col="red", pch=19)
+```
+
+7. For what it pertains the coefficients **takers** hasn't been affected much, and it still retains its significance. On the other side, both **ratio** and **salary** both have drammatically changed coefficients & have lost their significance (p-value greater than any common alpha level). In terms of goodness of fit, we are still able to retain a slightier higher R^2 **82.46%**, but given the addition of a new predictor looking at the adjusted R^2 gives a better view of the data. With the adjusted R^2 decreasing in comparison to the previous model. Overall, I do not see expend as improving the model. 
+
+```{r linearModel_expend,error=TRUE, echo=FALSE}
+#Linear model regress totals on takers,ratio,salary,& expend
+lmod <- lm(total ~ takers + ratio +salary+expend,data=sat)
+summary(lmod)
+#plot(lmod$fitted.values,lmod$residuals, xlab = 'Fitted Values',ylab = 'Residuals', main='Residuals v #vs Fitted values')
+#abline(a = 0, b = 0)
+```
+
+8. **H0**: Bratio=Bsalary=Bexpend=0 given takers, **HA**: Bratio!= 0 or Bsalary!=0 or Bexpend!=0 given takers. We can run an F-test that follows a distribution F(3, 45) which yields an F-value of **3.2133** and a p-value of **0.03165**. At an alpha level of 5%, we *reject* the null in favor of the alternative. 
+
+```{r FtestSalaryOrNo,error=TRUE, echo=FALSE}
+#Load data & packages
+library(faraway)  #data(uswages, package="faraway")
+data(sat) 
+
+#Linear model regress totals on takers,ratio, & salary, 
+lmod <- lm(total ~ takers + ratio +salary+expend,data=sat)
+null_mod <- lm(total ~ takers, data= sat)
+anova(null_mod, lmod)
+```
+
