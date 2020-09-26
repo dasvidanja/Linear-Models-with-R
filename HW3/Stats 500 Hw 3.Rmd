@@ -1,5 +1,5 @@
 ---
-title: ''
+title: ' '
 author: ''
 date: ''
 output:
@@ -29,7 +29,7 @@ abline(a = 0, b = 0)
 
 2. **H0**: Bsalary <=0 , **HA**: Bsalary > 0. We are going to perform a *t-test*(Bsalary/se(Bsalary) ) that follows a distribution of **t(46)** with a value of **2.541**. The *p-value* associated with this test statistics is **0.0145**. Now this is reflective of a two sided hypothesis test (i.e Bsalaray =0, or Bsalary !=0). Hence, the appropriate p-value for a one sieded t test is 0.0145/2 = **0.00725**, which is smaller than our alpha level 0.01. As a result, we *reject* the null hypothesis in which Bsalary<= 0, in favor of the alternative Bsalary>0. 
 
-3. **H0**: Bratio = 0, **HA**: Bratio  != 0 .We are going to perform an *t-test*(Bratio/se(Bratio)) that follows a distribution of **t(46)** with a value of **-2.187**. The *p-value* associated with this test statistics is **0.0339**. Now this is reflective of a two sided hypothesis test (i.e Bsalaray =0, or Bsalary !=0). As a result, we *fail to reject* the null hypothesis in which Bsalary= 0. 
+3. **H0**: Bratio = 0, **HA**: Bratio  != 0 .We are going to perform an *t-test*(Bratio/se(Bratio)) that follows a distribution of **t(46)** with a value of **-2.187**. The *p-value* associated with this test statistics is **0.0339**. Now this is reflective of a two sided hypothesis test (i.e Bsalaray =0, or Bsalary !=0). As a result, we *fail to reject* the null hypothesis,if our alpha level is 0.01. In case our alpha level is 0.05, then we would *reject* the null hypothesis in favour of the alternative. 
  
 4. **H0**: Bratio=Bsalary=Btakers=0, **H1**: Btakers!=0 or Bratio!=0 or Bsalary!=0. In this model we are testing the hypthesis that at least one of the coefficients is not zero (i.e Bratio!=0). We are able to use an **F-test** with distribution **F(3, 46)** and an f-value of **71.721** which yields a p-value of **~0**. Hence, we *reject* the null in favor of the alternative meaning that at least one coefficient will be significant in the model (i.e explain variance in the response).
 
@@ -58,6 +58,7 @@ nn_ci
 
 ```{r jointInterval,echo=FALSE, include=FALSE}
 require(ellipse)
+
 ```
 ```{r ellipse, echo=FALSE, out.height='75%', out.width='75%', fig.align='center'}
 plot(ellipse(lmod,c(3,4)),type="l")
