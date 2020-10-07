@@ -1,0 +1,190 @@
+---
+title: ''
+author: ''
+date: ''
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### HW 4
+
+``` {r readData , error = T,echo = FALSE}
+#Load data & packages
+library(faraway)
+data(teengamb)
+#head(teengamb)
+
+#sex (levels(teengamb$test) <- c("Male","Female"))
+# Change 0 to male, and 1 to female
+teengamb$sex[teengamb$sex == 1] <- "FEMALE"
+teengamb$sex[teengamb$sex == 0] <- "MALE"
+
+# Change sex from quantitative to categorical through factor
+teengamb$sex <- factor(teengamb$sex)
+```
+
+After running a linear model with all predictors present (sex,status, income, verbal), we get insignificant values for coefficients status & verbal. As a result, an F test is run to understand whether dropping these predictors from the analysis would be beneficial. Indeed, the F test impedes us to reject "H0: Bstatus = Bverbal=0" confirming their lack of need. Hence, our final model regresses gamble only on **sex** and **income**. 
+
+```{r featureSelection, echo=FALSE}
+lmod= lm(gamble ~ sex+status+income+verbal, data= teengamb)
+lmod_siv = lm(gamble ~ sex+income, data= teengamb)
+#F test to check whether Bstatus==0
+anova(lmod_siv, lmod)
+#print('Model Selected')
+summary(lmod_siv)
+```
+
+
+1. One can check for constant variance by plotting residuals agains fitted values. For a better resolution one can take the square root of the abs(residuals).  Clearly, constant variance assumption is not valid. 
+```{r constantVariance, echo=FALSE,  out.height='75%', out.width='61%', fig.align='center'}
+
+#Check for constant variance by plotting residuals (y) vs fitted (x)
+par(mfrow=c(1,2))
+
+#Plot residuls against fitted  
+plot(fitted(lmod_siv),residuals(lmod_siv), xlab= 'fitted values', ylab='residuals', main= expression(Residuals-"vs"-Fitted))
+abline(h=0)
+
+#Plot sqrt(abs(residuls)) double resolution  
+plot(fitted(lmod_siv), sqrt(abs(residuals(lmod_siv))),xlab= 'fitted values',ylab=expression(sqrt(residuals)) , main= expression(sqrt(Residuals)-"vs"-Fitted))
+```
+> Furthermore, the non constant variance can be checked by looking at the strenght of the relationship between residuals and fitted. In a constant variance scenario, the R^2 should be zero.
+
+```{r rsquared}
+lmod_res_fit= lm(sqrt(abs(residuals(lmod_siv))) ~ fitted(lmod_siv))
+summary(lmod_res_fit)$r.squared
+```
+> In order to "fix" this broken assumption, a transformation is applied to the response (sqrt). The constant variance does indeed check out now, as verified  by the residuals vs fitted values plot. 
+
+```{r transformeResponse, echo = FALSE, out.height='50%', out.width='50%', fig.align='center'}
+#Transform
+t_lmod_siv= lm(sqrt(gamble) ~ sex+income, data= teengamb)
+
+#Check for constant variance one more
+plot(fitted(t_lmod_siv),residuals(t_lmod_siv), xlab='Fitted', ylab = 'Residuals',main = expression(lm(sqrt(gamble) ~ sex+income)))
+abline(h=0)
+print('The model with a transformed response')
+summary(t_lmod_siv)
+```
+
+2. Normality can be checked through QQ plot (residuals/standardized), histogram , or Shapiro-Wilk (H0: residuals are normal) test. All graphical and numerical methods suggest normaility is satisfied.
+
+```{r normality, echo=FALSE ,out.height='75%', out.width='75%', fig.align='center' }
+
+par(mfrow=c(1,3))
+
+#Normality is checked throguh QQ-plot 
+qqnorm(residuals(t_lmod_siv),ylab="Residuals",main="QQ plot Residuals")
+qqline(residuals(t_lmod_siv))
+
+#Standardized residuals
+qqnorm(rstandard(t_lmod_siv),ylab="Standardized Residuals",main='QQ plot Std. Res')
+abline(0,1)
+
+#Histogram
+hist(residuals(t_lmod_siv),xlab="Residuals",main="Histogram of Residuals")
+
+#Shapiro Wilk Test, Ho: residuals are normal (fail to reject)
+shapiro.test(residuals(t_lmod_siv))
+```
+
+3. Leverage points are extreme values in the X space. One can check for such points through a half plot. Any point greater than 2p/n should be investigated further. In our case observations 33 & 42 are extremes.
+
+```{r leveragePoints, echo=FALSE,out.height='75%', out.width='75%', fig.align='center'}
+#Leverages are extreme values in the X spacv
+hatv <- hatvalues(t_lmod_siv)
+#Should sum to p (number of parameters)
+#Wsum(hatv)
+#head(hatv)
+#Visualize through halfnormal plot , anything greater than 2p/n should be  considered more closely
+hatv[which(hatv>2*3/length(hatv))]
+halfnorm(hatv,ylab="Leverages", main='Half-normal plot for Leverages')
+
+```
+
+4. One can check for outliers by computing the studentized and apply Bonferroni's correction to find those points that do not fit the data. At an alpha level of 5% there are no apparent outliers given that maximum studentized residuals is smaller than the absolute value of the Bonferroni's critical value.
+
+```{r outliers, echo=FALSE}
+#Bonferroni's Correction , level = alpha/n (it is conservative) (ALPHA=0.05)
+#Studentized
+stud <- rstudent(t_lmod_siv)
+print('Maximum Studentized Residual')
+stud[which.max(abs(stud))]
+
+#Conclusion: no outliers
+#Reference: It is not worth the trouble of computing the outlier test p-value unless the studentized residual exceeds about 3.5 in absolute value.
+```
+```{r Bonferroni,}
+#Bonferroni Critical Value (alph=0.05)
+qt(.05/(47*2), t_lmod_siv$df.residual-1)
+```
+5. An influential point is a one whose removal from the data would cause a drastic change in the fit. One popular metric to identify such points is Cook's Distance.
+
+```{r inlfuential,echo = FALSE, fig.align='center',out.height='75%', out.width='75%' }
+#Cook statistic popular influential diagnostics
+
+#half normal plots can be used to identify influential points
+cook <- cooks.distance(t_lmod_siv)
+halfnorm(cook,3,ylab="Cook’s distances", main='Influential Points')
+
+#Should these values be dropped from the model? Does the model change significantly?
+hat_lmod = lm(sqrt(gamble) ~ sex+income, data= teengamb, subset=(cook < max(
+cook)))
+
+#Plot, standardized residuals vs levarage
+#plot(rstandard(t_lmod_siv), hatv)
+```
+> Droppiong the "influential" points from the model does not change the coefficinets, RSE, or R^2.
+
+```{r dropMaxCook, echo=FALSE}
+#Model
+hat_lmod$call
+#Coefficients
+(summary(hat_lmod))$coefficients
+#Residual Standard Error
+(summary(hat_lmod))$sigma
+#R^2
+(summary(hat_lmod))$r.squared 
+```
+
+6. There is no ambiguous (i.e. non-linear) relationship between the predictors and the response.
+
+```{r resPredRel, echo=FALSE, fig.align='center',out.height='75%', out.width='75%'}
+
+par(mfrow=c(1,3))
+plot(teengamb$income, residuals(t_lmod_siv), xlab = 'Income', ylab='Residuals', main='Residuals vs Predictor Structure',cex.main=0.85)
+abline(h=0)
+
+plot(teengamb$income, sqrt(teengamb$gamble), xlab = 'Income', ylab=expression(sqrt(gamble)), main='Response vs Predictor Structure', cex.main=0.85)
+
+d = residuals(lm(sqrt(gamble) ~ sex,teengamb))
+m = residuals(lm(income ~ sex,teengamb))
+plot(m,d,xlab="Income residuals",ylab="Teengamb residuals",
+     main='Partial Regression Structure',cex.main=0.85)
+#coef(lm(d ~ m))
+#coef(t_lmod_siv)
+abline(0,coef(t_lmod_siv)['income'])
+```
+```{r partialRegression,fig.align='center',out.height='75%', out.width='75%', echo =FALSE, include=FALSE}
+d = residuals(lm(sqrt(gamble) ~ sex,teengamb))
+m = residuals(lm(income ~ sex,teengamb))
+plot(m,d,xlab="Income residuals",ylab="Teengamb residuals",
+     main='Partial Regression Structure',cex.main=0.8)
+coef(lm(d ~ m))
+coef(t_lmod_siv)
+abline(0,coef(t_lmod_siv)['income'])
+```
+> This is the overall structure of the model (a gift from R). 
+
+```{r structure, echo=FALSE,fig.align='center'}
+par(mfrow=c(2,2))
+plot(t_lmod_siv)
+```
+
+
+
