@@ -1,0 +1,177 @@
+---
+title: "STATS 500 Test 1"
+author: "Martin Zanaj."
+date: ""
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Academic Honor Code
+
+"*I have **not** used any resources from outside the class or discussed the exam with anyone.*” -Martin Zanaj
+
+1. The dataset **hprice**  is data representing housing prices in 36 US metropolitan statistical areas (MSAs) over 9 years from 1986-1994. It is made up of 8 different variables. The variables are: narsp, ypc, perypc, regtest, rcdum, ajwtr, msa, time from these ones four are quantitative & four are categorical. 
+
+
+Variable      |     Type      |Description
+------------- | ------------- |---------
+narsp         | Quantitative  |natural log average sale price in thousands of dollars
+ypc           | Quantitative  |average per capita income
+perypc        | Quantitative  |percentage growth in per capita income
+regtest       | Quantitative  |Regulatory environment index
+rcdum         | Categorical   |Rent control (0=no, 1=yes)
+ajwtr         | Categorical   |Adjacent to a coastline (0=no, 1=yes)
+msa           | Categorical   |indicator for the MSA (1-36)
+time          | Categorical?  |Year 1=1986 to 9= 1994
+
+
+>  From the summary below we can see the overall distribution & numerical frequency. Perhaps, some 'interesting' numerical facts that can immediately grab the eye are: negative score in perypc (does negative data make sense in this case), no rent control is by far more popular than rent control, more houses seem to be away from coastline (make sense given limited coastline).  Further analysis will reveal their importance, or lack thereof. 
+
+``` {r readData , error = T,echo = FALSE}
+#Load data & packages
+library(faraway)
+data(hprice)
+
+#head(teengamb)
+
+#sex (levels(teengamb$test) <- c("Male","Female"))
+# Change 0 to male, and 1 to female
+#teengamb$sex[teengamb$sex ==1] <- "FEMALE"
+#teengamb$sex[teengamb$sex ==0] <- "MALE"
+
+# Change sex from quantitative to categorical through factor
+#teengamb$sex <- factor(teengamb$sex)
+
+#Get a numerical summary of the data 
+summary(hprice)
+#str(hprice)
+#help(hprice)
+#R Calculation
+#df.residual(lmod) * (summary(lmod)$sigma)**2
+```
+
+
+2. Linear regression model with narsp as the response and ypc, perypc, regtest, rcdum, and time as predictors.
+
+```{r regressionModle, echo=FALSE }
+lmod <- lm(narsp ~ ypc + perypc + regtest +rcdum +time,data=hprice)
+summary(lmod)
+```
+
+
+3. The **RSS** is equal to **8.72**. Now refering to Ch.2 of "Linear Models with R" on page 16, there is a clear formula for calculating tha variance of e. The esimtate for such variance is represented by simga_hat^2 which is equal to RSS/df.residuals, where df.residuals is eqaul to (n-p) [total observations - (#predictors +1)]{324-6}.This formula can be rearranged, so as to solve for RSS by RSS= sigma_hat^2 * df.residuals. Both of these values can be found in the regression summary output where **sigma_hat = 0.1656** and **df. residulas = 318**. Hence, our calculations can be carried as **0.1656^2 * 318 = 8.72**. The results can be checked through the deviance() command which gives the RSS for our model. 
+
+```{r RSS}
+#RSS calculartion 
+(0.1656**2)*318
+
+#RSS
+deviance(lmod)
+```
+
+4. The **total sum of sqaures** is **35.55**. Again, by making use of the previous results, summary, and our dear book (page 23) the original formula is R^2 = 1- RSS/TSS, where R^2 is the *multiple R-squared* from the linear regression output;the RSS is the residual sum of squares, and the TSS is the total sum of squares. This formula can be rearranged, so as to solve for TSS by TSS = RSS/ (1-R^2). Hence, TSS = **8.72/(1-0.7547) = 35.54**. The results can be checked by taking the sqaured deviance of response - mean(response) [sum((yi-ybar)**2)].
+
+```{r totalSumSquares}
+#TSS=RSS/(1-R^2)
+(8.72)/(1-0.7547)
+#Check
+sum((hprice$narsp- mean(hprice$narsp))**2)
+```
+
+5. Dropping the variable **rcdum** gives the bigger reduction in R2 (i.e. 0.7547-0.7357=0.019). This is a way to infer about variable importance- having a bigger reduction in R^2 when a particular variable is dropped is a sign that the variable is indeed important in explaining the variance in the response. 
+
+> Summary of fit of the model without *perypc* variable. Total reduction from original fit **0.0057**.
+
+```{r fit2, echo=FALSE}
+fit2 <- lm(narsp ~ ypc + regtest +rcdum +time,data=hprice)
+summary(fit2)
+```
+
+> Summary of fit of the model without *rcdum* variable. Total reduction from original fit **0.019**.
+
+```{r fit3, echo=FALSE}
+fit3 <- lm(narsp ~ ypc + perypc +regtest +time,data=hprice)
+summary(fit3)
+```
+
+6. **Yes**, one can infer about the importance of the predictors by looking at the **p-values** in the original regression output (first fit). Through these p-values one can learn the respective satistical significance of each predictor. In our case, comparing the p-value for perypc & rcdum does indeed confirm the results in question 5- rcdum has a lower p-value (more significant) than perypc. Hence, rcdum is more importan than perypc. As a result, taking away an important predictor from the model will yield in a bigger reduction in R^2  than an unimportant one. 
+
+
+7. The residuals against the fitted values is a common diagnostics graphical tool to check for the *constant variance* assumption that we make when performing regression. In order to check if this assumption holds, we plot residuals agains fitted values. For a better resolution one can take the square root of the abs(residuals). It is not super clear, but the constant variance assumption might not be valid because the errors seem to follow particular trends for different regions in the fitted values space (e.g. errors for 4 to 4.5 seem to be smaller than errors from 4.5 to 5). There should be no pattern in order for the constant variance assumption to hold. We can verify the fact that there might be a relationship between residuals & fitted by running a linear regression. The R^2 from this model is 0.036 (should be zero if no relationship) which does confirm our doubts about the possible non-constant variance. 
+
+```{r constantVariance, echo=FALSE,  out.height='75%', out.width='61%', fig.align='center'}
+par(mfrow=c(1,2))
+
+#Plot residuls against fitted  
+plot(fitted(lmod),residuals(lmod), xlab= 'fitted values', ylab='residuals', main= expression(Residuals-"vs"-Fitted))
+abline(h=0)
+
+#Plot sqrt(abs(residuls)) double resolution  
+plot(fitted(lmod), sqrt(abs(residuals(lmod))),xlab= 'fitted values',ylab=expression(sqrt(abs(residuals))) , main= expression(sqrt(abs(Residuals))-"vs"-Fitted))
+
+lmod_res_fit= lm(sqrt(abs(residuals(lmod))) ~ fitted(lmod))
+summary(lmod_res_fit)$r.squared
+```
+
+8. The QQ plot of residuals is a common diagnostics graphical tool to check for the *normality* assumption that we make about residuals when performing linear regression. To confirm the normality result, we can use other methods such as  QQ plot (standardized residuals), histogram , & Shapiro-Wilk (H0: residuals are normal) test. All graphical and numerical methods suggest that normaility is **NOT** satisfied.
+
+```{r normality, echo=FALSE,out.height='75%', out.width='75%'}
+
+par(mfrow=c(1,3))
+
+#Normality is checked throguh QQ-plot 
+qqnorm(residuals(lmod),ylab="Residuals",main="QQ plot Residuals")
+qqline(residuals(lmod))
+
+#Standardized residuals
+qqnorm(rstandard(lmod),ylab="Standardized Residuals",main='QQ plot Std. Res')
+abline(0,1)
+
+#Histogram
+hist(residuals(lmod),xlab="Residuals",main="Histogram of Residuals")
+
+#Shapiro Wilk Test, Ho: residuals are normal (fail to reject)
+shapiro.test(residuals(lmod))
+```
+
+9. Observation **40** has the largest residual.
+
+```{r largeResidul}
+#Residuls
+res=lmod$residuals
+lmod$residuals[which.max(abs(res))]
+```
+
+10. The point is **not** an outlier given that the p-value **0.5649** is bigger than the alpha level **0.0001**. Hence, we fail to reject H0, and conclude that the point is not an outlier. 
+
+```{r outlier, echo=FALSE, include=FALSE}
+#res <- residuals(lmod)
+#which(res == max(abs(res)) )
+p_val = 2*(1-pt(max(abs(res)), df= 324-6-1))
+alpha = 0.05/324
+p_val<alpha
+```
+
+11. Leverage points are extreme values in the X space. In our case, the observation that have the highest leverage is **54**. One can confirm for such point through a half plot.
+
+```{r leveragePoints,out.height='75%', out.width='75%', fig.align='center'}
+#Leverages are extreme values in the X spacv
+hatv <- hatvalues(lmod)
+#Max
+hatv[which.max((hatv))]
+
+#Confirm results throguh half normal plot
+halfnorm(hatv,ylab="Leverages", main='Half-normal plot for Leverages')
+```
+
+
+
+
+
+
+
