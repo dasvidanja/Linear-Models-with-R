@@ -1,0 +1,64 @@
+---
+title: ''
+author: ''
+date: ''
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### HW 5
+
+Data *longley*, model with *Employed* as the response and the other variables as predictors. The high R^2 & a majority of predicotr being insignificant could be a potential signal for collinearity.
+
+```{r dataset, echo=FALSE}
+library(faraway)
+data(longley)
+#names(longley)
+```
+
+```{r fit, echo=FALSE}
+lmod= lm(Employed ~ GNP.deflator+GNP+Unemployed+Armed.Forces+Population+Year, data=longley)
+summary(lmod)
+```
+1. There are 3 condition number (relative size of eigenvalues) that are greater than the accepted 30 threshold. These results are indicative that some predictors are linear combinations of others, and X^tX is singular/close to singular. This causes a 'lack of identifiability' in which there is no unique least squares estimate of b, or if there is one than it is imprecise. The standard errors are inflated so that t-tests may fail to reveal significant factors. The fit becomes very sensitive to measurement errors where small changes in y can lead to large changes in b_hat. The solution may require removing some predictors.
+
+```{r conditionNumber, echo=FALSE}
+x <- model.matrix(lmod)[,-1]
+e <- eigen(t(x) %*% x)
+k=sqrt(e$val[1]/e$val)
+k
+```
+
+2. As hinted by the previous results, we do find high correlations with different set of predictors. **GNP.deflator** has a high positive correlation with **GNP**, **Population**, and **Year**. **GNP** has a high positive correlation with **GNP.deflator**,**Population**, and **Year**. **Population** has a high positive correlation with **GNP.deflator**, **GNP**, and **Year**. Finally, **Year** has a high positive correlation with **GNP.deflator**,**GNP**, and **Population**. In short, **GNP.deflator**,**GNP**, **Year**, and **Population** are extremely correlated.
+
+```{r correlation,echo=FALSE}
+round(cor(longley[,-7]),2)
+```
+
+3. Since we found multiple condition numbers greater than 30, we expect that problems are being caused by more than just one linear combination (more than one set of predictors). The variance inflation factors (VIFs) allows us to quantify the standard error for a particular predictor. It is noticable that the highly correlated predictors mentioned earlier, have the highest VIF (i.e. GNP.deflator, GNP, Population, & Year). For example, we can interpret sqrt(758.98) = 27.5496 as telling us that the standard error for Year is 27.5496 times larger than it would have been without collinearity. We cannot apply this as a correction because we did not actually observe orthogonal data, but it does give us a sense of the size of
+the effect.
+
+```{r VIF, echo=FALSE}
+require(faraway)
+vif(x)
+```
+
+4. We have too many variables that are trying to do the same job of explaining the response. We can reduce the collinearity by carefully removing some of the variables. But we should not conclude that the variables we drop have nothing to do with the response. Since GNP.deflator, GNP, Population, & Year are extremely correlated with eachother- —any one of them might do a good job of representing the other.  It make sense to use only one of them in our model. I have picked **GNP** for simplicity. 
+
+> Comparing this with the original fit, we see that the fit is very similar in terms of R2,but fewer predictors are used. The coefficients are all significant (alpha=10%). The condition numbers are all below the advised 30 threshold. There seem to be no extreme correlations (although Unemployed & GNP is indeed a bit high). Finally, the VIF's seem to be within the range of 1 (orthogonal predictors ==1). Overall, this model is superior to the previous in terms of simplicity & statistical 'soundness.' 
+
+```{r newFit, echo=FALSE}
+lmod2= lm(Employed ~ GNP+Unemployed+Armed.Forces, data=longley)
+summary(lmod2)
+x2 <- model.matrix(lmod2)[,-1]
+e2 <- eigen(t(x2) %*% x2)
+k2=sqrt(e2$val[1]/e2$val)
+k2
+round(cor(x2),2)
+vif(x2)
+```
