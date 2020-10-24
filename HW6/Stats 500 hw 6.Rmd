@@ -1,0 +1,57 @@
+---
+title: ''
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### HW 6
+
+1. Model  with *total* as the  response and *takers*, *ratio*, *salary*, and *expend* as predictors from dataset *sat*.
+
+```{r data,echo=FALSE}
+library(faraway)
+data(sat)
+```
+
+a. Ordinary Least Squares, in this model **takers** seems to be the only significant (alpha=5%) predictor having a negative coefficient. All other predictors are insignificant with *ratio* having a negative coefficient and *salary* & *expend* having positive coefficients. The intercept is quite large and positive. The R^2 (0.82) is high & the RSE (32) is farily low. 
+
+```{r ols,echo=FALSE}
+ols_fit = lm(total ~ takers+ratio+salary+expend, data = sat)
+summary(ols_fit)
+```
+
+
+b. Least Absolute Deviations, in this model **takers** & **ratio** seem to be both significant (alpha=5%) predictors having both negative coefficients. All other predictors are insignificant with *expend* having a negative coefficient and *salary* having a positive coefficient. The intercept is quite large and positive. The SE for *expend* is quite high resonating its insignificance.
+
+```{r lib, include=FALSE, echo=FALSE}
+library(quantreg)
+```
+
+```{r lad,echo=FALSE}
+lad_fit = rq(total ~ takers+ratio+salary+expend, data = sat)
+summary(lad_fit,se="nid")
+```
+
+
+c. Huber's Robust Regression, in this model **takers** seems to be the only significant (alpha=5%) predictor having a negative coefficient. All other predictors are insignificant with *ratio* having a negative coefficient and *salary* & *expend* having positive coefficients. The intercept is quite large and positive. The RSE (25) is farily low. 
+```{r huber,echo=FALSE}
+library(MASS)
+library(sfsmisc)
+huber_fit = rlm(total ~ takers+ratio+salary+expend, data = sat)
+summary(huber_fit)
+#P-values
+f.robftest(huber_fit, var = "takers")
+f.robftest(huber_fit, var = "ratio")
+f.robftest(huber_fit, var = "salary")
+f.robftest(huber_fit, var = "expend")
+```
+
+Model Comparison
+
+**Ordinary least squares** and **Huber's Robust Regression** are closer to each other relative in their results. Both models have *takers* as the only significant predictor; both models share the same coefficients *signs* (takers (-), ratio(-),salary(+), expand(+)); both models have similar *intercept* (high & positive); both models share similar *RSE* (32 & 25); both models have similar *standard errors*. The models differ slightly in the *estimates of the coefficients*. The models p-values for **ratio** differ greatly- 26% vs 10%. 
+
+**OLS/HRR** and **Least Absolute Deviations** are a bit further apart from each other relative in their results. Both models have *takers* as the a significant predictor-but LAD considers *ratio* as a significant predictor too; both models share the same coefficients *signs* (takers (-), ratio(-),salary(+))-but LAD considers *expend* negative in its sign (ols/HRR +); both models have similar *intercept* (high & positive); both models have similar *standard errors*. The models differ greatly in the *estimates of the coefficients*. The models p-values for **salary** differ greatly- on one side OLS/HRR  (49%,35%) and on the other LAD with 12%. 
