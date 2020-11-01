@@ -1,0 +1,105 @@
+---
+title: ''
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### HW 7
+
+1.Model with *lpsa* as the response and the *other variables* as predictors from *prostate* data. 
+
+The full model contains both significant (lcavol,lweight,svi) & insignificant (age,lbph,lcp,gleason, pgg45) predicotrs (alpha=0.05). The R^2 is farily high 65.48% with a residual standard error of 0.7084. The coefficients for *age* & *lcp* are negative, whereas the coefficients for *lcavol*,*lweight*, *lbph*,*svi*,*gleason*, and *pgg45* are positive.
+
+```{r data, echo=FALSE}
+library(faraway)
+data(prostate)
+fit_all= lm(lpsa~ lcavol+lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate )
+summary(fit_all)
+```
+
+A. Backward Elimination- The final model given by backward substitution has as significant predicotrs (in order of importance): **lcavol**,**lweight**, and **svi**. All coefficients for the beta^ estimates are positive, but the intercept is negative. The R^2 is fairly high 62.64 and the residual standard error is 0.7168.
+
+```{r backwardSubsitution, echo=FALSE}
+#Start with all predictors in the model
+fit_bs= lm(lpsa~ lcavol+lweight+age+lbph+svi+lcp+gleason+pgg45, data=prostate )
+#summary(fit_bs)
+
+#Remove predictor with highes p-value (> alpha; alpha=0.05)
+#fit_bs= update(fit_bs, .~ .-gleason)
+#summary(fit_bs)
+
+#Repeat until all predicotrs are significant
+#Remove predictor with highes p-value (> alpha; alpha=0.05)
+#fit_bs= update(fit_bs, .~ .-lcp)
+#summary(fit_bs)
+
+#Remove predictor with highes p-value (> alpha; alpha=0.05)
+#fit_bs= update(fit_bs, .~ .-pgg45)
+#summary(fit_bs)
+
+#Remove predictor with highes p-value (> alpha; alpha=0.05)
+#fit_bs= update(fit_bs, .~ .-age)
+#summary(fit_bs)
+
+#Remove predictor with highes p-value (> alpha; alpha=0.05)
+#fit_bs= update(fit_bs, .~ .-lbph)
+
+fit_bs= lm(lpsa ~ lcavol + lweight + svi, data=prostate)
+summary(fit_bs)
+```
+
+B. Adjusted R^2- The model with the highest Adjusted R^2 is the model with a total of 8 parameters. This means that the final model will have 7 predictors, and such ones being (in order of importance)- **lcavol**, **svi**,**lweight**,**lbph**, **age**, **pgg45**, and **lcp**. Out of the 7 predictors only the first three are indeed significant (lcavol,svi,lweight); the rest are insignificant. The coefficients for the beta^ estimates are all positive with the exception of age & lcp (negative). The R^2 is fairly high 65.44 and the residual standard error is 0.7048.
+
+```{r adjustedR_squared, echo=FALSE, out.height="50%",out.width='65%',fig.align='center'}
+library(leaps)
+fit_ars= regsubsets(lpsa ~ .,data= prostate)
+summary(fit_ars)
+ars_summary = summary(fit_ars)
+plot(2:9,ars_summary$adjr2, xlab='Number of Parameters', ylab='Adjusted R squared' , main='Adjusted R^2 for Model with P Parameters')
+#which.max(ars_summary$adjr2)
+fit_ars= lm(lpsa ~ lcavol+lweight+svi+lbph+age+pgg45+lcp,data= prostate)
+summary(fit_ars)
+```
+
+C. Mallow's Cp - The model with the minimum Mallow's Cp is the model with a total of 6 parameters. This means that the final model will have 5 predicotrs, and such ones being (in order of importance)- **lcavol**, **lweight**,**svi**,**lbph**, and **age**. Out of the 5 predictors only the first three are indeed significant (lcavol,svi,lweight); the rest are insignificant. The coefficients for the beta estimates are all positive with the exception of age(negative). The R^2 is fairly high 64.41 and the residual standard error is 0.7073.
+
+```{r MallowCp,echo=FALSE,out.height="75%",out.width='75%',fig.align='center'}
+fit_mallow= regsubsets(lpsa ~ .,data= prostate)
+summary(fit_mallow)
+mallow_summary = summary(fit_mallow)
+plot(2:9,mallow_summary$cp, xlab='Number of Parameters', ylab='Mallows Cp',  ylim=c(0,25), main='Mallows Cp for Model with P Parameters' )
+abline(0,1)
+#which.min(mallow_summary$cp)
+fit_mallow= lm(lpsa ~ lcavol+lweight+svi+lbph+age,data= prostate)
+summary(fit_mallow)
+```
+
+**Model Comparison**
+
+> *Selected Models*
+
+  - All best models from backwards substitution, adjusted R^2, and Mallow's Cp tend to have similar estimates & signs for the coefficients that they do share - with the exception of the  **intercept** for backward sub (negative). 
+  - The order of significance for predictors (**lcavol**, **lweight**, and **svi**) seems to be simlar across all modles- with the excpetion of backward subsitution  for the pair (*lweight*, *svi*). 
+  - All models, consider **gleason** the most insignificant predictor.
+  - Backward substituion only has significant predictors in its final suggested model, whereas both adjusted R^2 & Mallow's Cp have a mix of significant & insignifcant predictors. 
+  
+  
+> *Original fit*
+
+- **vs backward substitution**, boht models are similar in the coefficients, standard errors, and p-values of their shared predictors. The major difference is the amount of predictors- in the original model there are a total of 8 different predictors, whereas in the b.s. model there are only 3 predictors. Yet, the R^2 & RSE differ only slightly from each other. All of the predicors in the b.s. model are significant in the orignal model. Also, the intercept is negative for b.s., but positive for the original model. This method tends to favor smaller models.
+
+- **vs adjusted r^2**, both models have almost the same number of predictors (minus gleason). Hence, the coefficients, standard errors, p-values, are almost identical. The R^2 did slightly drop,  but the RSE is the same. The adjusted R^2 model does contain unsignificant predictors. 
+
+- **vs Mallow's Cp**, both models have similar coefficients, standard errors, p-values. The R^2 & RSE did slightly drop. This model contains unsignificant predictors. Mallow's Cp tends to pick larger models given similar penalty as AIC. 
+
+
+> *Final Conclusion*
+
+- The suggestion would be to use the model suggested by *backward subsitution* with predictors **lcavol**,**lweight**, and **svi** if the scope for the analysis is *inference*.
+
+- Instead, if the scope for the analysis is *prediction*, the suggestion would be to use the model suggested by *Mallow's Cp* with predictors **lcavol**, **lweight**,**svi**,**lbph**, and **age**.
