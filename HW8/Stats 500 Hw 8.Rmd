@@ -1,0 +1,195 @@
+---
+title: ''
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r set-options, echo=FALSE, cache=FALSE}
+options(width = 1000)
+```
+
+### HW 8
+
+Take the  *fat* data, and use the *percentage of body fat* as the response and the *other* variables as potential predictors.  Split the data into train/test.  Run the following models:
+
+```{r read_data, echo=FALSE}
+library(faraway)
+data(fat)
+
+#Percentage of body fat according to Siri method
+#fat$y = (495/fat$density)−450
+
+#Train/Test & remove [brozek, density, & free]
+index =seq(10, 250, by=10)
+train =fat[-index, -c(1, 3, 8)]
+test =fat[index, -c(1, 3, 8)]
+```
+
+1. **OLS**, there is a need for regularization to improve the  fit.
+
+```{r ols, echo=FALSE}
+ols_fit= lm(siri ~., data=train)
+summary(ols_fit)
+```
+```{r ols_predict}
+#Prediction
+ols_pred_train=predict(ols_fit, newdata = train)
+ols_pred_test=predict(ols_fit, newdata = test)
+
+#Root Mean Squared Error
+rmse_train= sqrt((sum((train$siri-ols_pred_train)**2)/length(ols_pred_train)))
+rmse_test= sqrt((sum((test$siri-ols_pred_test)**2)/length(ols_pred_test)))
+rmse_train
+rmse_test
+```
+
+
+2.**Mallow's Cp** - The model with the minimum Mallow's Cp is the model with a total of 8 parameters. This means that the final model will have 7 predictors, and such ones being- age, weight, neck, abdom, thigh, forearm, wrist. 
+
+```{r MallowCp,echo=FALSE,out.height="65%",out.width='65%',fig.align='center'}
+library(leaps)
+#Find best model
+fit_mallow= regsubsets(siri ~ .,data= train)
+
+mallow_summary = summary(fit_mallow)
+plot(2:9,mallow_summary$cp, xlab='Number of Parameters', ylab='Mallows Cp',  ylim=c(0,25), main='Mallows Cp for Model with P Parameters' )
+abline(0,1)
+
+#Fit 
+mallow_fit = lm(siri ~ age + weight + neck + abdom + thigh + forearm + wrist,data= train)
+summary(fit_mallow)
+summary(mallow_fit)
+```
+```{r mallow_test_prediction, echo=FALSE}
+
+#Prediction
+mallow_pred_train= predict(mallow_fit, newdata = train)
+mallow_pred_test= predict(mallow_fit, newdata = test)
+
+#Root Mean Squared Error
+rmse_train= sqrt((sum((train$siri-mallow_pred_train)**2)/length(mallow_pred_train)))
+                 
+rmse_test= sqrt((sum((test$siri-mallow_pred_test)**2)/length(mallow_pred_test)))
+
+rmse_train
+rmse_test
+
+```
+
+
+
+3. **AdjustedR2** - The model with the highest Adjusted R^2 is the model with a total of 9 parameters. This means that the final model will have 8 predictors, and such ones being- age, weight, neck, abdom, hip, thigh, forearm, wrist. 
+
+
+```{r adjustedR_squared, echo=FALSE, out.height="50%",out.width='65%',fig.align='center'}
+
+#Find best model
+fit_ars= regsubsets(siri ~ .,data= train)
+
+ars_summary = summary(fit_ars)
+plot(2:9,ars_summary$adjr2, xlab='Number of Parameters', ylab='Adjusted R squared' , main='Adjusted R^2 for Model with P Parameters')
+
+which.max(ars_summary$adjr2)
+#summary(fit_ars)
+
+#Fit predictors of best model (8)
+ars_fit= lm(siri ~age+weight+neck+abdom+hip+thigh+forearm+wrist ,data= train)
+summary(ars_fit)
+```
+
+```{r ars_prediction, echo=FALSE}
+
+#Prediction
+ars_pred_train= predict(ars_fit, newdata = train)
+ars_pred_test= predict(ars_fit, newdata = test)
+
+#Root Mean Squared Error
+rmse_train= sqrt((sum((train$siri-ars_pred_train)**2)/length(ars_pred_train)))
+                 
+rmse_test= sqrt((sum((test$siri-ars_pred_test)**2)/length(ars_pred_test)))
+
+rmse_train
+rmse_test
+```
+
+4. **Ridge regression**, after standardizing the predictors, the first step was to check out the diag( X'X) for possible values of lambda. The plausible range values were from 0 to 1.5. The best lambda is 1.09 (yields smallest test error). The coefficients that go with this lambda are shown in the output below.
+
+```{r ridge_regression, echo=FALSE}
+#Standardize data
+library(MASS)
+fat_scaled = as.data.frame(scale(fat))
+fat_scaled$siri = fat$siri
+
+train_scaled = fat_scaled[-index, -c(1,3,8)]
+test_scaled = fat_scaled[index, -c(1,3,8)]
+
+#Look For Lambda values X'X diagonal solve()
+my_lambda = diag(solve(t(train_scaled)%*%as.matrix(train_scaled)))
+print('Lambda values')
+my_lambda[1:8]
+my_lambda[9:15]
+
+# Ridge regression
+ridge_fit = lm.ridge(siri ~ ., data = train_scaled, lambda = c(0,0.001,0.01,0.99,1,1.01,1.05,1.06,1.07,1.08,1.09,1.10,1.11,1.20,1.5))
+the_min= which.min(ridge_fit$GCV)
+
+
+#Best model
+ridge_fit = lm.ridge(siri ~ ., data = train_scaled, lambda = 1.09)
+
+#Coefficients  from fit with best lambda 
+print('Coefficents')
+(coef(ridge_fit)[1:8])
+(coef(ridge_fit)[9:15])
+
+#Root Mean Squared Error (train/test)
+library(Metrics)
+X_train = as.matrix(cbind(1, train_scaled[,-1]))
+rmse(X_train %*% coef(ridge_fit), train_scaled$siri)
+
+X_test = as.matrix(cbind(1, test_scaled[,-1]))
+rmse(X_test %*% coef(ridge_fit), test_scaled$siri) 
+```
+
+### Models Performance
+
+*OLS*,  this model has a total of 4 significant predictors (age, abdom, forearm, wrist), and a residual standard error of 4.324. The R^2 is 0.7591, which is quite high indeed. This model is not too bad in terms of performance, but does have too many insignificant predicotrs & as a result the analysis can be improved (through regularization). Train and test errors are presented in the table. 
+
+
+*Mallow's Cp*, this model has 7 predictors and a total of 6 significant predictors (age, weight, abdom, thigh, forearm, wrist), and a residual standard error of 4.294 (smaller than OLS). The R^2 is 0.7546, which is quite high indeed. This model is quite good in terms of performance- it has less predictors than OLS & the oveall performance is similar. Train and test errors are presented in the table. 
+
+
+*Adjusted R^2*, this model has 8 predictors and a total of 6 significant predictors (age, weight, abdom, thigh, forearm, wrist), and a residual standard error of 4.28 (smaller than OLS & MCp). The R^2 is 0.7566, which is quite high indeed. This model is quite good in terms of performance, but it has insignifcnat predictors compared to Mallow's Cp where the oveall performance is similar. Train and test errors are presented in the table. 
+
+
+*Ridge*,this model best lambda is 1.09. The coefficients that results from the best lambda are 
+
+ age        |   weight      |  height     |   adipos    |   neck       |  chest        |  abdom
+ -----------|---------------|-------------|-------------|--------------|---------------|----------
+ 0.96031824 | -2.36140066   | -0.18161031 | 0.02750306  | -1.07830316  | -0.55241476   | 10.37269974
+ 
+ 
+  hip        |   thigh       |  knee      |  ankle      |  biceps      |  forearm     |  wrist
+ ------------|---------------|------------|-------------|--------------|--------------|----------
+-1.33678364  | 1.29763598    | 0.03757994 | 0.21631607  | 0.50169488   | 0.91796568   | -1.67469614
+ 
+
+In all models the training error is always smaller than the testing error (in-sample vs out-of-sample error). This is typical, and reflective of the bias/variance trade of. Also, training error tends to be smaller given that our models are models is trained on that data; it will be biased in  a certain way to give nice results. Test data error, gives a better idea of the performance of the model given that the model has not seen that data in its modeling phase. The predictor *abdom* seems to be the most significant in most models.
+Finally, the **best model*** is **Ridge Regression** with the smallest test root mean squared error **4.28**. Ridge tends to be biased towards smaller coefficents. 
+
+**Model**     |   **Train RMSE** |**Test RMSE**
+------------- | -------------    |---------
+OLS           |    4.178651      | 4.395559
+Mallow's Cp   |    4.217687      | 4.342456
+Adjusted R^2  |    4.200863      | 4.327248
+Ridge         |    4.183839      | 4.282531
+
+
+
+
+
