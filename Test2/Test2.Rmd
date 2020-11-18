@@ -1,0 +1,200 @@
+---
+title: ''
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Midterm 2 
+
+“I have not used any resources from outside the class or discussed the exam with anyone.” - Martin Zanaj
+
+**Data Hprice**
+
+Hprice is a dataset on housing prices in 36 US metropolitan statistical areas (MSAs) over 9 years from 1986 to 1994. The data has 324 observations and 8 variables. 
+
+
+Variable      |     Type      |Description
+------------- | ------------- |---------
+narsp         | Quantitative  |natural log average sale price in thousands of dollars
+ypc           | Quantitative  |average per capita income
+perypc        | Quantitative  |percentage growth in per capita income
+regtest       | Quantitative  |Regulatory environment index
+rcdum         | Categorical   |Rent control (0=no, 1=yes)
+ajwtr         | Categorical   |Adjacent to a coastline (0=no, 1=yes)
+msa           | Categorical   |indicator for the MSA (1-36)
+time          | Categorical?  |Year 1=1986 to 9= 1994
+
+
+1. The summary function allows to see descriptive statistics for all variables. In the case of *narsp*, the mean is larger than the median. This is common of a **right skewed** scenario. 
+
+```{r readData, echo=FALSE}
+library(faraway)
+data(hprice)
+
+#help(hprice)
+summary(hprice$narsp)
+```
+
+2. A plot that allows one to visualize the distribution of a variable is the histogram. The histogram of the variable *narsp* does indeed confirm the previous finding- right skewed with a mean greater than the mean. Hence, the results are **consistent**. 
+
+```{r histNarsp, out.height='90%', out.width='90%', fig.align='center', echo=FALSE}
+hist(hprice$narsp, xlab= 'Narsp Values', ylab='Frequency', main= 'Histogram of Narsp Variable')
+mx <- mean(hprice$narsp)
+median = median(hprice$narsp)
+abline(v = mx, col = "blue", lwd = 2)
+abline(v = median, col = "red", lwd = 2)
+legend("topright", c("Mean", "Median"), fill=c("blue", "red"))
+
+```
+
+3. We want to pick the lambda tha maximizes the log-likelihood function. From the plot, the 95% confidence interval for  $\lambda$ (-2.8, -0.3) does not include 1, so a transformation is appropriate. The estimated value for the optimal **$\lambda$ = -1.47**.  In this case, we can use the same value for the $\lambda$ for the transformation, or we could use an approximation to make interpretation easier. The rounded value of -1 is within the confidence interval. We can transform the data using **$\lambda$ =-1**, which corresponds to the **inverse transformation** (transformed vlaue= 1/original value).
+
+
+```{R linearRegression, echo=FALSE, out.height='90%', out.width='90%', fig.align='center', }
+#Fit
+fit= lm(narsp ~ ypc+perypc+regtest+rcdum+time, data=hprice)
+#Box-Cox
+library(MASS)
+boxcox(fit,plotit=T, lambda=seq(-4,0, 0.1))
+
+#(lambda <- boxcox(fit)$x[which.max(boxcox(fit)$y)])
+```
+
+4. In both models, all predictors are significant including the intercetp. In terms of R^2 the first model (original) seems to have a higher R^2 coefficient. The transformed model has smaller standard errors for its coefficients that then original model. The sign of all coefficient (except intercept) has changed in the transformed model.  The reciprocal reverses order among values of the same sign: largest becomes smallest. Now, the resulting formula becomes y= 1/(b0+b1X1+b2X2+...+bnXn). The  slope b1, b2,..,  bn represent the expected change in average y (natural log average sale price in thousands of dollars)  associated with a 1-unit increase in X.
+
+```{r modelOutput, echo=FALSE}
+summary(fit)
+trans_fit= lm((1/narsp) ~ ypc+perypc+regtest+rcdum+time, data=hprice)
+summary(trans_fit)
+```
+
+**Data Divusa**, represents the divorce rates in the USA from 1920-1996. The data has 77 observations and 7 variables.
+
+Variable      |     Type      |Description
+------------- | ------------- |---------
+year          | Quantitative  |the year from 1920-1996
+divorce       | Quantitative  |divorce per 1000 women aged 15 or more
+unemployed    | Quantitative  |unemployment rate
+femlab        | Quantitative  |percent female participation in labor force aged 16+
+marriage      | Quantitative  |marriages per 1000 unmarried women aged 16+
+birth         | Quantitative  |births per 1000 women aged 15-44
+military      | Quantitative  |military personnel per 1000 population
+
+
+5. Backward elimination strategy, using alpha=.05, yields the model with predictors: **year**, **femlab**, **marriage**, **birth**, **military**. 
+
+```{r, fullModel, echo=FALSE}
+#Start with all predictors in the model
+fit_div=lm(divorce~year+unemployed+femlab+marriage+birth+military,data=divusa)
+summary(fit_div)
+```
+
+```{r backwardSubsitution, echo=FALSE}
+#Remove predictor with highes p-value (> alpha; alpha=0.05)
+fit_div=lm(divorce~year+femlab+marriage+birth+military,data=divusa)
+summary(fit_div)
+```
+
+6. The table shows the predictors in order of importance (best fit) according to the regsubsets function and their respective AIC score. The plot is able to give a graphical representation of the table. The optimal model is the one with the smallest AIC (69.33) and predictors: **femlab**, **birth**,**marriage**,**year**, & **military**. 
+
+
+
+Model         |     Predictor                                 |AIC
+------------- | ----------------------------------------------|---------
+1             | femlab                                        |134.28
+2             | femlab+birth                                  |111.83
+3             | femlab+birth+marriage                         |85.2
+4             | femlab+birth+marriage+year                    |76.69
+5             | femlab+birth+marriage+year+military           |69.33
+6             | femlab+birth+marriage+year+military+unemployed|70.41
+
+
+
+```{r, plot, echo=FALSE}
+p=(1:6)
+AIC= c(134.28,111.83,85.2,76.69,69.33,70.41)
+plot(p, AIC, main='AIC For Each Regsub Model', xlab = '# of Predictors')
+```
+
+```{r aicModeling, echo=FALSE}
+library(leaps)
+fit_ars= regsubsets(divorce~year+unemployed+femlab+marriage+birth+military,data=divusa)
+summary(fit_ars)
+
+model_1= lm(divorce ~femlab , data=divusa)
+step(model_1)
+
+model_2= lm(divorce ~femlab+birth , data=divusa)
+step(model_2)
+
+
+model_3= lm(divorce ~femlab+birth+marriage , data=divusa)
+step(model_3)
+
+model_4= lm(divorce ~femlab+birth+marriage+year , data=divusa)
+step(model_4)
+
+model_5= lm(divorce ~femlab+birth+marriage+year+military , data=divusa)
+step(model_5)
+
+model_6= lm(divorce ~femlab+birth+marriage+year+military+unemployed , data=divusa)
+step(model_6)
+
+#ars_summary = summary(fit_ars)
+```
+```{r AIC, echo=FALSE}
+g= lm(divorce ~ ., data=divusa)
+step(g)
+```
+
+7. Adjusted R^2- The model with the highest Adjusted R^2 is the model with a total of 6 parameters. This means that the final model will have 5 predictors, and such ones being (in order of importance)- **femlab**,**birth**,**marriage**,**year**, and **military**. All predictors are significant.The R^2 is exceptionally high 93%, which signifies a good fit. The standard errors are all small (within .10). Overall, this model is a good fit.  
+
+
+```{r adjustedR_squared, echo=FALSE, out.height="50%",out.width='65%',fig.align='center'}
+fit_adjusted= regsubsets(divorce~ . ,data=divusa)
+
+ars_summary = summary(fit_ars)
+plot(2:7,ars_summary$adjr2, xlab='Number of Parameters', ylab='Adjusted R squared' , main='Adjusted R^2 for Model with P Parameters')
+#which.max(ars_summary$adjr2)
+
+fit_ars2= lm(divorce ~ femlab+birth+marriage+year+military,data= divusa)
+summary(fit_ars2)
+```
+
+8. Least Absolute Deviations & OLS are similar in terms of intercetp, coeffiecients sign/values, and standard errors. The majority of the predicotrs are similar in both models. The major difference pertains to the predictors **military**  & **unemployed**. In the OLS only the last one is insignificant (alpha=5%); whereas in the LAD model *unemployed* is significant & *military* is insignificant.
+
+```{r lib, include=FALSE, echo=FALSE}
+library(quantreg)
+```
+
+```{r lad,echo=FALSE}
+lad_fit = rq(divorce ~., data = divusa)
+summary(lad_fit,se="nid")
+
+```
+
+
+9.  **Yes**, LASSO can be used for variable selection.  Thorugh LASSO one can perform regularization and feature selection.  It penalizes the coefficients of the regression variables shrinking some of them to zero.  After the shrinking procees, he variables that still have a non-zero coefficient are selected to be part of the model. The extent to which the regularization is taken depends on lambda parameter. In short,LASSO helps to increase the model interpretability by eliminating irrelevant variables that are not associated with the response variable. Hence, LASSO indirectly performs variable selection for us. 
+
+> **No**, Ridge regression does perform variable slection.  Rather, it “shrinks” all predictor coefficient estimates toward zero. These estimates might get  very close to zero, but they might never become equal to zero. 
+
+
+10. In a scenarion where the errors are correlated, but all other assumptions are met one can use **Generalized Least Squares**. One example, where one might have correlated data is temporal data. If the errors are correlated, one can  calculated this by computing the correlation between succesive pairs of residuals. Some models that can aid with this are a simple **AR(1)**, or a more sophisticated **ARMA** model.
+
+11. KNN is a non-parametric machine learning algorithim-does not make any assumption about the distribution of the data. It calculates the distance between a specific number of observations (k); it finds the  k closest neighbors, and finally  it assigns an observation to the category that make up the majority of the neighbors. Now, **bias** can be tought of as the systematic error in a determinate estimatation. Ideally, one wants low bias- the less the bias (error) the closer to the truth. **Variance**, can be thought of as the concept of estimating the function f(.) from different datasets (of the same population). Ideally, we do not want the f(.) estimated function to differ too much from one another- we do not want the f() to be too specific to the dataset at hand. Instead, we want the estimated f(.) to do well with other data as well. Hence, it is desirable to have low variance as well. Now, ideally we want a model with low bias and low variance, but unfortunately these are two competing resources, and as a result we need to compromise between the two. In the case of KNN, the choice of K will determine the degree of this compromise. As we choose smaller and smaller K's, our bias will eventually become non-existent, but on the other hand, our variance will sky-rocket high. This model will be no good. If we pick a K that is too big, we will end up getting a samller variance, but our bias will increase given we will introduce error into our estimate. Hence, the best strategy is to pick a K such that bias & variance are not too high/nor too low, but optimal. The optimal scenario depends on the data and on the application. Usually such K is choosen through cross-validation & tends to be between 5-30 (generally, not always). Finally, this is called a trade-off because you are never picking the most flexible model, nor the least flexible model for they will favor only one side of the formula. Instead, you attempt to favor an optimal balance where there  is neither overfitting nor underfitting. 
+
+
+
+
+
+
+
+
+
+
