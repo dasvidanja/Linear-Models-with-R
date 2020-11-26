@@ -1,0 +1,74 @@
+---
+title: ''
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### HW9 
+
+> Load the *Pima* diabtes dataset. Remove missing values from  the predictors glucose, diastolic, & bmi. The predictor pregnant does have zero's, but in this context a zero does make sense (no children); age & diabetes do not contain zero's. 
+
+```{r readData, echo=FALSE}
+library(faraway)
+data(pima)
+dim(pima)
+summary(pima)
+```
+
+```{r removeNans, echo=FALSE}
+pima=pima[pima$glucose!=0,]
+pima=pima[pima$diastolic!=0,]
+pima=pima[pima$bmi!=0,]
+pima=pima[pima$diabetes!=0,]
+pima=pima[pima$age!=0,]
+
+dim(pima)
+summary(pima)
+```
+
+> Fit  a  *binomial  regression*  model  with  the result of the diabetes *test* as a response and *pregnant*, *glucose*, *diastolic*, *bmi*, *diabetes* and *age* as predictors.
+
+```{r binModel, echo=FALSE}
+library(MASS)
+logit= glm(test ~pregnant+glucose+diastolic+bmi+diabetes+age, family=binomial(link=logit), data=pima)
+summary(logit)
+```
+1. Refering to slides 1 of week 12, it is **not possible** to use to the deviance to test the goodness of fit given that the response (test) is a binary one (0,1). 
+
+
+2. The ratio of the odds of testing positive for a woman with a BMI at the first quartile compared to a woman with BMI at the third quartile, with all other predictors held constant is **0.4371729**. A unit increase in x1 (BMI) with all other predictors held fixed leads to an increase in B4 (bmi coeff) in log-odd; equivalently odds being multiplied by exp(B4). Hence, the ratio would be exp(B4* x1=27.5) / exp(B4* x1=36.60), where B4 is equal to the coefficient of from the model (0.090926). 
+
+```{r bmi, echo=FALSE}
+summary(pima$bmi)
+ratio =  exp(0.090926*27.5)/  exp(0.090926*36.60)
+ratio
+```
+
+3. Women who test positive for diabetes have **higher** diastolic blood pressure. This can be first checked informally through a numerical/graphical summary, and as well more rigorously through a two-sample t-test. The conclusion suggests that there is indeed a statistical significant difference of distolic pressure between  diabeteic and non-diabetic.  The diastolic blood pressure is **NOT significant** as shown in the summary of  the binomial regression model. Although the results might seem contradictory, they are not. The key is to recognize that in the in the two-sample t-test we are only dealing with one predictor (disatolic); whereas in the binomial regression model we are dealing 6 different predictors. Often times, one predictor becomes insignifancant, if its effect is already represented by another predictor. Hence, in our case although we see that positive cases have higher diastolic pressure, this relationship could be already be taken into account by one of the 5 remaining predictors in the model. 
+
+```{r diastolic, echo=FALSE,out.height='75%', out.width='75%', fig.align='center'}
+pos = pima[pima$test==1,]
+neg= pima[pima$test==0,]
+
+summary(pos$diastolic)
+summary(neg$diastolic)
+
+par(mfrow=c(1,2))
+boxplot(pos$diastolic, main='Boxplot positive', col='blue')
+boxplot(neg$diastolic, main='Boxplot negative', col='red')
+
+t.test(pos, neg)
+```
+
+4. The probability of testing positive for a 30-year old woman who has  been  pregnant once, has  glucose  measurement  of  100,  diastolic blood pressure 70, BMI 25, and diabetes pedigree measurement of 0.6 is **0.0697082**. 
+
+```{r prediction}
+test= data.frame(test=1,age=30, pregnant=1,glucose=100, diastolic=70, bmi=25,diabetes=0.6)
+ilogit(predict(logit,test))
+```
+
