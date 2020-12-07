@@ -1,0 +1,78 @@
+---
+title: ''
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### HW 10
+
+```{r readData,echo=FALSE}
+library(faraway)
+data(dvisits)
+#help("dvisits")
+```
+
+1. Fit a poisson regression with the variable “doctorco” as the response,  and sex, age,  income, levyplus, freepoor, freerepa,illness, actdays, and hscore as predicotrs. 
+
+```{r model,echo=FALSE}
+model= glm(doctorco ~ sex+age+income+levyplus+freepoor+freerepa+illness+actdays+ hscore, family = poisson, data=dvisits)
+summary(model)
+```
+
+2. The expected number of doctor visits for a woman age 50 with an income of 10,000 Australian dollars, not covered by private insurance, provided coverage by the government due to lowincome (but not due to old age), with 2 ilnesses in the past 2 weeks,no days of reduced activity, and a health score of 1 is **0.1467**
+
+
+```{r predict}
+# make a dataframe with new data
+newdata = data.frame(sex=1, age=0.52, # midpoint(50-54)/100
+                     income=0.90005,# midpoint(8001-10000)/10000
+                     levyplus=0, freepoor=1, freerepa=0, illness= 2, actdays=0, hscore=1)
+
+# Prediction
+predict(model, newdata = newdata, type='response')
+```
+
+3. For the person  described above, the chance she  will  have  0 doctor visits is **86.36%**.
+
+```{r predict2}
+dpois(x=0, lambda=0.1466855 )
+```
+
+4. A Poisson model assumes that the mean structure equals to variance structure. If we allow for a dispersion parameter,in a perfect seceario (mean=variance), the dispersion parametere would equal 1. This assumption is broken when the dispersion parameter is greater/smaller than 1. In our case, the dispersion parameter is **1.33** suggesting **mild overdispersion** (variance greater than mean), which can be confirmed by the graphical aid. Possible reason for overdispersion could be the lack of homogeneity (e.g. *heterogeneity* where subjects within each covariate- **young vs old** combination differ greatly), and/or independence. Also, the problem of overdispersion may be confounded with the problem of omitted covariates- not all available variables have been used in this analysis; the lack of those covariates from the model could be the reason for overdispersion. Finally, the main problem I have been able to discover is the presence of multiple **outliers**; these observations have have high studentized residuals (>3.5) that  allows us to reject the null hypothesis (not an outlier) with a level of alpha/n.  
+
+```{r overdispersion, echo=FALSE, fig.align='center', out.height='95%', out.width='95%'}
+#Graphical
+plot(model$fit, residuals(model, type='response')^2,xlab=expression(hat(mu)), ylab= expression((y-hat(mu))^2), main='Overdispersion Graphical Aid')
+```
+```{r numerical}
+#Numerical
+sigma2= sum(residuals(model, type='pearson')^2)/model$df.residual
+sigma2
+```
+
+After dropping the first outlier of the data, and redoing the analysis, the overdispersion parameter is indeed smaller.
+
+```{r, dropOutlier}
+#Sutdentized Residuals
+stud <- rstudent(model)
+
+#Ho: not an outlier Ha: outlier
+2*(1-pt(max(abs(stud)), model$df.residual-1)) >  (0.05/5190)
+
+#New data without outlier
+myData <- dvisits[-c(334), ]
+
+#New Model
+model2= glm(doctorco ~ sex+age+income+levyplus+freepoor+freerepa+illness+actdays+ hscore, 
+            family = poisson, data=myData)
+
+#Smaller Overdispersion
+sigma3= sum(residuals(model2, type='pearson')^2)/model2$df.residual
+sigma3
+
+```
